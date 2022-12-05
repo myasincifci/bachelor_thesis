@@ -12,7 +12,7 @@ from lightly.loss import BarlowTwinsLoss
 
 from short_video_dataset import ShortVideoDataset
 
-from test_augmentations import apply_transforms
+from test_augmentations import apply_transforms, collate_fnc
 
 class BarlowTwins(nn.Module):
     def __init__(self, backbone):
@@ -30,13 +30,17 @@ backbone = nn.Sequential(*list(resnet.children())[:-1])
 model = BarlowTwins(backbone)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print(device)
 model.to(device)
 
-dataset = ShortVideoDataset('video_short', transform=T.ToTensor())
+dataset = ShortVideoDataset('video_short', transform=T.Compose([
+    T.ToTensor(),
+    T.CenterCrop(size=720)
+]))
 # dataset = LightlyDataset.from_torch_dataset(dataset)
 
 # collate_fn = ImageCollateFunction(input_size=32)
-# collate_fn = apply_transforms
+collate_fn = collate_fnc
 
 dataloader = torch.utils.data.DataLoader(
     dataset,
@@ -44,18 +48,18 @@ dataloader = torch.utils.data.DataLoader(
     # collate_fn=collate_fn,
     shuffle=True,
     drop_last=True,
-    num_workers=4,
+    num_workers=8,
 )
 
 criterion = BarlowTwinsLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.06)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.09)
 
 print("Starting Training")
-for epoch in range(100):
+for epoch in range(1000):
     total_loss = 0
     for batch in tqdm(dataloader):
-        x0 = apply_transforms(batch).to(device) # x0.to(device)
-        x1 = apply_transforms(batch).to(device) # x1.to(device)
+        x0 = apply_transforms(batch).to(device)
+        x1 = apply_transforms(batch).to(device)
         z0 = model(x0)
         z1 = model(x1)
         loss = criterion(z0, z1)
