@@ -27,9 +27,9 @@ def main():
 
     torch.manual_seed(42)
 
-    resnet = torchvision.models.resnet18()
+    resnet = torchvision.models.resnet34()
     backbone = nn.Sequential(*list(resnet.children())[:-1])
-    backbone[0] = nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2), padding=(3, 3), bias=False)
+    backbone[0] = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
     model = BarlowTwins(backbone)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -50,7 +50,7 @@ def main():
     )
 
     criterion = BarlowTwinsLoss(lambda_param=1e-3)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay=0.001)
 
     print("Starting Training")
     for epoch in range(1000):
@@ -68,7 +68,7 @@ def main():
         avg_loss = total_loss / len(dataloader)
         print(f"epoch: {epoch:>02}, loss: {avg_loss:.5f}")
 
-        if avg_loss < 120:
+        if avg_loss < 100:
             torch.save(model, 'model.pth')
             break
 

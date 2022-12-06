@@ -80,7 +80,7 @@ if __name__ == '__main__':
         axes_pad=0.1
     )
 
-    for ax, im in zip(grid, torch.cat(tuple(apply_transforms_inf(batch) for _ in range(5)), dim=0)):
+    for ax, im in zip(grid, torch.cat(tuple(apply_transforms(batch) for _ in range(5)), dim=0)):
         ax.imshow(im.swapaxes(0,-1).swapaxes(0,1))
 
     plt.show()
