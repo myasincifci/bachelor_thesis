@@ -27,13 +27,14 @@ class BarlowTwins(nn.Module):
 
 resnet = torchvision.models.resnet18()
 backbone = nn.Sequential(*list(resnet.children())[:-1])
+backbone[0] = nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2), padding=(3, 3), bias=False)
 model = BarlowTwins(backbone)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 model.to(device)
 
-dataset = ShortVideoDataset('video_short', transform=T.Compose([
+dataset = ShortVideoDataset('video_short_half_res', transform=T.Compose([
     T.ToTensor(),
     T.CenterCrop(size=720)
 ]))
@@ -44,24 +45,26 @@ collate_fn = collate_fnc
 
 dataloader = torch.utils.data.DataLoader(
     dataset,
-    batch_size=8,
+    batch_size=64,
     # collate_fn=collate_fn,
     shuffle=True,
     drop_last=True,
     num_workers=8,
 )
 
-criterion = BarlowTwinsLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.09)
+criterion = BarlowTwinsLoss(lambda_param=1e-3)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
 
 print("Starting Training")
 for epoch in range(1000):
     total_loss = 0
     for batch in tqdm(dataloader):
         x0 = apply_transforms(batch).to(device)
-        x1 = apply_transforms(batch).to(device)
         z0 = model(x0)
+        del x0
+        x1 = apply_transforms(batch).to(device)
         z1 = model(x1)
+        del x1
         loss = criterion(z0, z1)
         total_loss += loss.detach()
         loss.backward()

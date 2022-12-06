@@ -13,7 +13,7 @@ import numpy as np
 
 from typing import Tuple
 
-input_size: int = 357
+input_size: int = 256
 cj_prob: float = 0.8
 cj_bright: float = 0.7
 cj_contrast: float = 0.7
@@ -47,26 +47,28 @@ def apply_transforms(batch: torch.Tensor) -> torch.Tensor():
 
     # resize = T.RandomResizedCrop(size=input_size, scale=(min_scale, 1.0)),
     resize = T.Resize(input_size)
-    ccrop = T.CenterCrop(size=batch[0].shape[1] * (np.random.rand()*0.5 + 0.5))
+    ccrop = T.CenterCrop(size=batch[0].shape[1] * (np.random.rand()*0.3 + 0.7))
     rotate = RandomRotate(prob=rr_prob)
     hflip = T.RandomHorizontalFlip()
     vflip = T.RandomVerticalFlip(p=vf_prob)
     jitter = T.RandomApply([color_jitter], p=cj_prob)
-    grayscale = T.RandomGrayscale(p=random_gray_scale)
+    #grayscale = T.RandomGrayscale(p=random_gray_scale)
     # blur = GaussianBlur(kernel_size=kernel_size * input_size, prob=gaussian_blur)
-    blur = T.GaussianBlur(kernel_size=int(kernel_size * input_size))
+    blur = T.GaussianBlur(kernel_size=3)#int(kernel_size * input_size))
 
-    batch_ = ccrop(batch)
+    batch_ = T.Grayscale()(batch)
+
+    batch_ = ccrop(batch_)
     batch_ = resize(batch_)
 
-    if np.random.rand() < hf_prob:
-        batch_ = hflip(batch_)  
+    # if np.random.rand() < hf_prob:
+    #     batch_ = hflip(batch_)  
 
     if np.random.rand() < cj_prob:
         batch_ = jitter(batch_)    
     
-    if np.random.rand() < random_gray_scale:
-        batch_ = grayscale(batch_)
+    # if np.random.rand() < random_gray_scale:
+    #     batch_ = grayscale(batch_)
     
     if np.random.rand() < gaussian_blur:
         batch_ = blur(batch_)
