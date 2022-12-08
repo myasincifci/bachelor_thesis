@@ -7,10 +7,13 @@ import torchvision.transforms as T
 
 from lightly.models.modules import BarlowTwinsProjectionHead
 from lightly.loss import BarlowTwinsLoss
+from custom_loss import CustomLoss
 
-from short_video_dataset import ShortVideoDataset
+from time_dataset import ShortVideoDatasetTime
 
 from augmentation import apply_transforms
+
+BATCH_SIZE = 1024
 
 class BarlowTwins(nn.Module):
     def __init__(self, backbone):
@@ -27,40 +30,39 @@ def main():
 
     torch.manual_seed(42)
 
-    resnet = torchvision.models.resnet34()
+    resnet = torchvision.models.resnet18()
     backbone = nn.Sequential(*list(resnet.children())[:-1])
-    backbone[0] = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+    backbone[0] = nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2), padding=(3, 3), bias=False)
     model = BarlowTwins(backbone)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(device)
     model.to(device)
 
-    dataset = ShortVideoDataset('video_short_half_res', transform=T.Compose([
+    dataset = ShortVideoDatasetTime('video_short_half_res', transform=T.Compose([
+        T.Resize(64),
         T.ToTensor(),
-        T.CenterCrop(size=720)
+        T.Grayscale()
     ]))
 
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=64,
-        shuffle=True,
-        drop_last=True,
+        batch_size=BATCH_SIZE,
+        shuffle=False,
         num_workers=8,
     )
 
-    criterion = BarlowTwinsLoss(lambda_param=1e-3)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay=0.001)
+    # criterion = BarlowTwinsLoss(lambda_param=1e-3)
+    criterion = CustomLoss(batch_size=BATCH_SIZE, l=5e-3)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.005, weight_decay=0.001)
 
     print("Starting Training")
-    for epoch in range(1000):
+    for epoch in range(100):
         total_loss = 0
-        for batch in tqdm(dataloader):
-            x0 = apply_transforms(batch).to(device)
-            x1 = apply_transforms(batch).to(device)
-            z0 = model(x0)
-            z1 = model(x1)
-            loss = criterion(z0, z1)
+        for index, batch in tqdm(dataloader):
+            x = batch.to(device)
+            z = model(x)
+            loss = criterion(z)
             total_loss += loss.detach()
             loss.backward()
             optimizer.step()
@@ -68,9 +70,8 @@ def main():
         avg_loss = total_loss / len(dataloader)
         print(f"epoch: {epoch:>02}, loss: {avg_loss:.5f}")
 
-        if avg_loss < 100:
-            torch.save(model, 'models/model_bt.pth')
-            break
+        
+        torch.save(model, 'models/model_time.pth')
 
 if __name__ == '__main__':
     main()
