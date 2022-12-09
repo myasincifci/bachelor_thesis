@@ -15,6 +15,7 @@ from augmentation import apply_transforms
 
 BATCH_SIZE = 1024
 
+
 class BarlowTwins(nn.Module):
     def __init__(self, backbone):
         super().__init__()
@@ -26,13 +27,15 @@ class BarlowTwins(nn.Module):
         z = self.projection_head(x)
         return z
 
+
 def main():
 
     torch.manual_seed(42)
 
     resnet = torchvision.models.resnet18()
     backbone = nn.Sequential(*list(resnet.children())[:-1])
-    backbone[0] = nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2), padding=(3, 3), bias=False)
+    backbone[0] = nn.Conv2d(1, 64, kernel_size=(
+        3, 3), stride=(2, 2), padding=(3, 3), bias=False)
     model = BarlowTwins(backbone)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -53,11 +56,12 @@ def main():
     )
 
     # criterion = BarlowTwinsLoss(lambda_param=1e-3)
-    criterion = CustomLoss(batch_size=BATCH_SIZE, l=5e-3)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.005, weight_decay=0.001)
+    criterion = CustomLoss(batch_size=BATCH_SIZE, l=1e-3)
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=0.005, weight_decay=0.001)
 
     print("Starting Training")
-    for epoch in range(100):
+    for epoch in range(50):
         total_loss = 0
         for index, batch in tqdm(dataloader):
             x = batch.to(device)
@@ -70,8 +74,8 @@ def main():
         avg_loss = total_loss / len(dataloader)
         print(f"epoch: {epoch:>02}, loss: {avg_loss:.5f}")
 
-        
         torch.save(model, 'models/model_time.pth')
+
 
 if __name__ == '__main__':
     main()
