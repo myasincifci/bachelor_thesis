@@ -7,10 +7,11 @@ from lightly.loss import BarlowTwinsLoss
 
 from tqdm import tqdm
 
-NUM_EPOCHS = 100# 30 # good
+NUM_EPOCHS = 50 # good
 LR = 1e-3
-BATCH_SIZE = 32
-PROXIMITY = 3
+BATCH_SIZE = 16
+PROXIMITY = 5
+LAMBDA_PARAM = 1e-3
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -26,8 +27,8 @@ def main():
     dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, drop_last=True, num_workers=8)
 
     model = TimeShiftModel().to(device)
-    criterion = BarlowTwinsLoss(lambda_param=1e-3)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay=0.001)
+    criterion = BarlowTwinsLoss(lambda_param=LAMBDA_PARAM)
+    optimizer = torch.optim.SGD(model.parameters(), lr=LR, weight_decay=0.001)
 
     for epoch in range(NUM_EPOCHS):
         losses = []
